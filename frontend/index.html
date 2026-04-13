@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FilmRec</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:       #0a0a10;
+            --surface:  #14141e;
+            --surface2: #1e1e2e;
+            --surface3: #28283c;
+            --accent:   #e50914;
+            --gold:     #f5c518;
+            --text:     #e8e8f0;
+            --dim:      #7878a0;
+            --border:   #252538;
+            --green:    #22c55e;
+            --radius:   12px;
+            --ease:     0.2s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── Auth ──────────────────────────────────────────────────────── */
+        #auth-screen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: radial-gradient(ellipse at 50% 40%, #1a0a2e 0%, #0a0a10 65%);
+        }
+
+        .auth-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .auth-card h1 { font-size: 2rem; margin-bottom: 0.2rem; }
+        .auth-card h1 span { color: var(--accent); }
+        .auth-card .tagline { color: var(--dim); font-size: 0.85rem; margin-bottom: 2rem; }
+
+        .tab-toggle {
+            display: flex;
+            background: var(--surface2);
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 1.5rem;
+            gap: 4px;
+        }
+
+        .tab-toggle button {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            background: transparent;
+            color: var(--dim);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: var(--ease);
+        }
+        .tab-toggle button.active { background: var(--surface3); color: var(--text); }
+
+        .form-group { margin-bottom: 1rem; }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--dim);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color var(--ease);
+        }
+        input:focus { border-color: var(--accent); }
+
+        .btn-primary {
+            width: 100%;
+            margin-top: 0.5rem;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background var(--ease);
+        }
+        .btn-primary:hover { background: #c8070f; }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .auth-error {
+            background: rgba(229,9,20,0.12);
+            border: 1px solid rgba(229,9,20,0.3);
+            color: #ff6b6b;
+            padding: 0.7rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        /* ── App shell ─────────────────────────────────────────────────── */
+        #app { display: none; min-height: 100vh; }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            height: 60px;
+        }
+
+        .logo { font-size: 1.3rem; font-weight: 800; flex-shrink: 0; }
+        .logo span { color: var(--accent); }
+
+        nav { display: flex; gap: 4px; }
+
+        nav button {
+            padding: 0.45rem 1rem;
+            border: none;
+            background: transparent;
+            color: var(--dim);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: var(--ease);
+            white-space: nowrap;
+        }
+        nav button:hover { color: var(--text); background: var(--surface2); }
+        nav button.active { color: var(--text); background: var(--surface2); font-weight: 600; }
+
+        .header-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.82rem;
+            color: var(--dim);
+            flex-shrink: 0;
+        }
+        .header-right strong { color: var(--text); }
+
+        .btn-logout {
+            padding: 0.38rem 0.75rem;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--dim);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            transition: var(--ease);
+        }
+        .btn-logout:hover { border-color: var(--accent); color: var(--accent); }
+
+        main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+        .section { display: none; }
+        .section.active { display: block; }
+
+        .section-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .section-sub { color: var(--dim); font-size: 0.85rem; margin-bottom: 1.75rem; }
+
+        /* ── Search bar ────────────────────────────────────────────────── */
+        .search-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.75rem;
+            flex-wrap: wrap;
+        }
+        .search-row input { flex: 1; min-width: 180px; }
+
+        select {
+            padding: 0.75rem 1rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* ── Movie grid ────────────────────────────────────────────────── */
+        .movie-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 1.25rem;
+        }
+
+        /* ── Movie card ────────────────────────────────────────────────── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: transform var(--ease), border-color var(--ease);
+        }
+        .card:hover { transform: translateY(-4px); border-color: var(--surface3); }
+
+        .card-poster {
+            height: 130px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.8rem;
+        }
+
+        .card-body { padding: 1rem; }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            line-height: 1.3;
+            margin-bottom: 0.2rem;
+        }
+
+        .card-year { color: var(--dim); font-size: 0.78rem; margin-bottom: 0.65rem; }
+
+        .genre-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.7rem; }
+
+        .tag {
+            padding: 0.18rem 0.45rem;
+            background: var(--surface2);
+            border-radius: 4px;
+            font-size: 0.68rem;
+            color: var(--dim);
+        }
+
+        .avg-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.78rem;
+            color: var(--dim);
+            margin-bottom: 0.65rem;
+            min-height: 1.2em;
+        }
+        .avg-rating .s { color: var(--gold); letter-spacing: -1px; }
+
+        /* ── Star input ────────────────────────────────────────────────── */
+        .stars-input { display: flex; align-items: center; gap: 2px; }
+
+        .stars-input span {
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: var(--border);
+            transition: color var(--ease);
+            user-select: none;
+            line-height: 1;
+        }
+        .stars-input span.on { color: var(--gold); }
+        .stars-input span:hover { color: var(--gold); }
+
+        .rated-badge { font-size: 0.68rem; color: var(--green); margin-left: 4px; }
+
+        /* ── Recommendation list ───────────────────────────────────────── */
+        .rec-item {
+            display: flex;
+            gap: 1.25rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.1rem 1.25rem;
+            margin-bottom: 0.75rem;
+            transition: border-color var(--ease);
+            align-items: center;
+        }
+        .rec-item:hover { border-color: var(--surface3); }
+
+        .rec-rank {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--dim);
+            width: 28px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .rec-poster {
+            width: 54px;
+            height: 72px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+
+        .rec-body { flex: 1; min-width: 0; }
+        .rec-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.3rem; }
+        .rec-meta { color: var(--dim); font-size: 0.78rem; margin-bottom: 0.5rem; }
+
+        .match-bar { display: flex; align-items: center; gap: 0.6rem; }
+
+        .match-track {
+            flex: 1;
+            height: 5px;
+            background: var(--surface2);
+            border-radius: 3px;
+            overflow: hidden;
+            max-width: 200px;
+        }
+        .match-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #ff6060);
+            border-radius: 3px;
+        }
+        .match-label { font-size: 0.75rem; color: var(--dim); white-space: nowrap; }
+
+        /* ── Preferences ───────────────────────────────────────────────── */
+        .pref-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.9rem;
+        }
+        .pref-name { width: 90px; font-size: 0.82rem; color: var(--dim); text-align: right; }
+        .pref-track {
+            flex: 1;
+            height: 8px;
+            background: var(--surface2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .pref-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #a78bfa);
+            border-radius: 4px;
+            transition: width 0.7s ease;
+            width: 0%;
+        }
+        .pref-val { width: 36px; font-size: 0.78rem; color: var(--dim); }
+
+        /* ── States ────────────────────────────────────────────────────── */
+        .loading, .empty {
+            text-align: center;
+            padding: 3.5rem 1rem;
+            color: var(--dim);
+            font-size: 0.9rem;
+        }
+        .empty big { display: block; font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+        /* ── Toast ─────────────────────────────────────────────────────── */
+        #toast {
+            position: fixed;
+            bottom: 1.75rem;
+            right: 1.75rem;
+            padding: 0.7rem 1.2rem;
+            background: var(--surface2);
+            border: 1px solid var(--green);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+            z-index: 999;
+        }
+        #toast.show { opacity: 1; }
+        #toast.err { border-color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<!-- ────────────────────────── AUTH ────────────────────────────────────── -->
+<div id="auth-screen">
+    <div class="auth-card">
+        <h1>Film<span>Rec</span></h1>
+        <p class="tagline">Personalised recommendations, powered by your taste</p>
+
+        <div class="tab-toggle">
+            <button class="active" onclick="authTab('login', this)">Sign in</button>
+            <button onclick="authTab('register', this)">Create account</button>
+        </div>
+
+        <div id="auth-error" class="auth-error"></div>
+
+        <!-- Login -->
+        <form id="form-login" onsubmit="doLogin(event)">
+            <div class="form-group">
+                <label>Username</label>
+                <input id="l-user" type="text" placeholder="your_username" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn-primary">Sign in</button>
+        </form>
+
+        <!-- Register -->
+        <form id="form-register" style="display:none" onsubmit="doRegister(event)">
+            <div class="form-group">
+                <label>Username</label>
+                <input id="r-user" type="text" placeholder="your_username" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input id="r-email" type="email" placeholder="you@example.com" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input id="r-pass" type="password" placeholder="Min. 8 characters" autocomplete="new-password" required>
+            </div>
+            <button type="submit" class="btn-primary">Create account</button>
+        </form>
+    </div>
+</div>
+
+<!-- ────────────────────────── APP ─────────────────────────────────────── -->
+<div id="app">
+    <header>
+        <div class="logo">Film<span>Rec</span></div>
+        <nav>
+            <button class="active" data-section="browse"   onclick="nav(this)">Browse</button>
+            <button data-section="for-you"                 onclick="nav(this)">For You ✦</button>
+            <button data-section="my-ratings"              onclick="nav(this)">My Ratings</button>
+            <button data-section="preferences"             onclick="nav(this)">Taste Profile</button>
+        </nav>
+        <div class="header-right">
+            Hi, <strong id="hdr-user"></strong>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- Browse -->
+        <div id="section-browse" class="section active">
+            <div class="section-title">Browse Movies</div>
+            <div class="section-sub">Click the stars on any card to rate it — your recommendations update instantly</div>
+            <div class="search-row">
+                <input type="search" id="search-q" placeholder="Search by title…" oninput="debouncedSearch()">
+                <select id="search-genre" onchange="fetchMovies()">
+                    <option value="">All Genres</option>
+                    <option>Action</option><option>Adventure</option><option>Animation</option>
+                    <option>Comedy</option><option>Crime</option><option>Documentary</option>
+                    <option>Drama</option><option>Fantasy</option><option>Horror</option>
+                    <option>Mystery</option><option>Romance</option><option>Sci-Fi</option>
+                    <option>Thriller</option><option>Western</option>
+                </select>
+            </div>
+            <div id="movies-grid" class="movie-grid"><div class="loading">Loading…</div></div>
+        </div>
+
+        <!-- For You -->
+        <div id="section-for-you" class="section">
+            <div class="section-title">For You</div>
+            <div class="section-sub">Ranked by cosine similarity between your taste profile and each film's genre vector</div>
+            <div id="recs-list"></div>
+        </div>
+
+        <!-- My Ratings -->
+        <div id="section-my-ratings" class="section">
+            <div class="section-title">My Ratings</div>
+            <div class="section-sub">Every film you've rated</div>
+            <div id="rated-grid" class="movie-grid"></div>
+        </div>
+
+        <!-- Preferences -->
+        <div id="section-preferences" class="section">
+            <div class="section-title">Your Taste Profile</div>
+            <div class="section-sub">Genre affinity scores derived from your rating history — higher means you favour it</div>
+            <div id="prefs-list" style="max-width:560px;margin-top:1.5rem"></div>
+        </div>
+
+    </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────────────────
+const GENRE_COLORS = {
+    Action:      '#c0392b,#e74c3c', Adventure: '#d35400,#e67e22',
+    Animation:   '#1a6fa8,#3498db', Comedy:    '#b7950b,#f39c12',
+    Crime:       '#4a235a,#8e44ad', Documentary:'#0e6655,#1abc9c',
+    Drama:       '#6c3483,#9b59b6', Fantasy:   '#7d3c98,#a569bd',
+    Horror:      '#641e16,#922b21', Mystery:   '#1b2631,#2e4057',
+    Romance:     '#943126,#e74c6f', 'Sci-Fi':  '#154360,#2980b9',
+    Thriller:    '#212f3c,#5d6d7e', Western:   '#6e2f11,#a04000',
+};
+const EMOJI = {
+    Action:'💥', Adventure:'🗺️', Animation:'🎨', Comedy:'😂', Crime:'🔫',
+    Documentary:'📽️', Drama:'🎭', Fantasy:'🧙', Horror:'👻', Mystery:'🔍',
+    Romance:'❤️', 'Sci-Fi':'🚀', Thriller:'😱', Western:'🤠',
+};
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let TOKEN = localStorage.getItem('fr_token');
+let ME    = localStorage.getItem('fr_user');
+let MY_RATINGS = {}; // movieId → star int
+let _searchTimer = null;
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+async function api(path, opts = {}) {
+    const h = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (TOKEN) h['Authorization'] = `Bearer ${TOKEN}`;
+    const r = await fetch(path, { ...opts, headers: h });
+    if (!r.ok) {
+        const e = await r.json().catch(() => ({ detail: r.statusText }));
+        throw new Error(e.detail || 'Request failed');
+    }
+    return r.status === 204 ? null : r.json();
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, err = false) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'show' + (err ? ' err' : '');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.className = '', 2600);
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+function authTab(tab, btn) {
+    document.querySelectorAll('.tab-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('form-login').style.display    = tab === 'login'    ? '' : 'none';
+    document.getElementById('form-register').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('auth-error').style.display = 'none';
+}
+
+function authError(msg) {
+    const el = document.getElementById('auth-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+async function doLogin(e) {
+    e.preventDefault();
+    const btn = e.submitter; btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+        const d = await api('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ username: v('l-user'), password: v('l-pass') }),
+        });
+        TOKEN = d.access_token; ME = v('l-user');
+        localStorage.setItem('fr_token', TOKEN);
+        localStorage.setItem('fr_user', ME);
+        enterApp();
+    } catch(err) {
+        authError(err.message);
+        btn.disabled = false; btn.textContent = 'Sign in';
+    }
+}
+
+async function doRegister(e) {
+    e.preventDefault();
+    const btn = e.submitter; btn.disabled = true; btn.textContent = 'Creating account…';
+    try {
+        await api('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ username: v('r-user'), email: v('r-email'), password: v('r-pass') }),
+        });
+        const d = await api('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ username: v('r-user'), password: v('r-pass') }),
+        });
+        TOKEN = d.access_token; ME = v('r-user');
+        localStorage.setItem('fr_token', TOKEN);
+        localStorage.setItem('fr_user', ME);
+        enterApp();
+    } catch(err) {
+        authError(err.message);
+        btn.disabled = false; btn.textContent = 'Create account';
+    }
+}
+
+function logout() {
+    TOKEN = ME = null; MY_RATINGS = {};
+    localStorage.removeItem('fr_token'); localStorage.removeItem('fr_user');
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'flex';
+}
+
+// ─── App entry ────────────────────────────────────────────────────────────────
+function enterApp() {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('hdr-user').textContent = ME;
+    syncMyRatings().then(fetchMovies);
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function nav(btn) {
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    const sec = btn.dataset.section;
+    document.getElementById(`section-${sec}`).classList.add('active');
+    if (sec === 'for-you')     fetchRecs();
+    if (sec === 'my-ratings')  fetchMyRatings();
+    if (sec === 'preferences') fetchPrefs();
+}
+
+// ─── My ratings map ───────────────────────────────────────────────────────────
+async function syncMyRatings() {
+    try {
+        const rs = await api('/users/me/ratings');
+        MY_RATINGS = {};
+        rs.forEach(r => MY_RATINGS[r.movie_id] = r.rating);
+    } catch(_) {}
+}
+
+// ─── Browse ───────────────────────────────────────────────────────────────────
+function debouncedSearch() {
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(fetchMovies, 320);
+}
+
+async function fetchMovies() {
+    const q = v('search-q');
+    const g = v('search-genre');
+    const p = new URLSearchParams({ limit: 48 });
+    if (q) p.set('q', q);
+    if (g) p.set('genre', g);
+    const grid = document.getElementById('movies-grid');
+    grid.innerHTML = '<div class="loading">Loading…</div>';
+    try {
+        const movies = await api(`/movies/search?${p}`);
+        grid.innerHTML = movies.length
+            ? movies.map(movieCard).join('')
+            : '<div class="empty"><big>🎬</big>No films found — try different filters.</div>';
+    } catch(err) {
+        grid.innerHTML = `<div class="empty"><big>⚠️</big>${h(err.message)}</div>`;
+    }
+}
+
+// ─── Movie card ───────────────────────────────────────────────────────────────
+function posterGrad(genres) {
+    const [c1, c2] = (GENRE_COLORS[genres[0]] || '#333,#111').split(',');
+    return `background:linear-gradient(135deg,${c1},${c2})`;
+}
+
+function starsHtml(avg, cnt) {
+    if (!cnt) return '<span style="font-style:italic;font-size:.73rem;color:var(--dim)">No ratings yet</span>';
+    const f = Math.round(avg);
+    return `<span class="s">${'★'.repeat(f)}${'☆'.repeat(5-f)}</span> ${avg.toFixed(1)} <span style="opacity:.6">(${cnt})</span>`;
+}
+
+function starInput(id) {
+    const cur = MY_RATINGS[id] || 0;
+    const spans = [1,2,3,4,5].map(i =>
+        `<span class="${i<=cur?'on':''}"
+              onmouseover="hov(${id},${i})"
+              onmouseout="unhov(${id})"
+              onclick="rate(${id},${i})">★</span>`
+    ).join('');
+    const badge = cur ? `<span class="rated-badge">✓</span>` : '';
+    return `<div class="stars-input" id="si-${id}">${spans}</div>${badge}`;
+}
+
+function hov(id, n) {
+    document.querySelectorAll(`#si-${id} span`).forEach((s,i) => s.classList.toggle('on', i<n));
+}
+function unhov(id) {
+    const cur = MY_RATINGS[id] || 0;
+    document.querySelectorAll(`#si-${id} span`).forEach((s,i) => s.classList.toggle('on', i<cur));
+}
+
+async function rate(movieId, stars) {
+    try {
+        await api(`/movies/${movieId}/rate`, { method:'POST', body: JSON.stringify({ rating: stars }) });
+        MY_RATINGS[movieId] = stars;
+        unhov(movieId);
+        // Re-render the badge if it wasn't there before
+        const container = document.querySelector(`#si-${movieId}`).parentElement;
+        const badge = container.querySelector('.rated-badge');
+        if (!badge) container.insertAdjacentHTML('beforeend', '<span class="rated-badge">✓</span>');
+        toast(`Rated ${stars} star${stars>1?'s':''} ★`);
+    } catch(err) {
+        toast(err.message, true);
+    }
+}
+
+function movieCard(m) {
+    return `
+    <div class="card">
+        <div class="card-poster" style="${posterGrad(m.genres)}">${EMOJI[m.genres[0]]||'🎬'}</div>
+        <div class="card-body">
+            <div class="card-title">${h(m.title)}</div>
+            <div class="card-year">${m.year||'—'}</div>
+            <div class="genre-tags">${m.genres.map(g=>`<span class="tag">${g}</span>`).join('')}</div>
+            <div class="avg-rating">${starsHtml(m.average_rating, m.rating_count)}</div>
+            ${starInput(m.id)}
+        </div>
+    </div>`;
+}
+
+// ─── Recommendations ──────────────────────────────────────────────────────────
+async function fetchRecs() {
+    const el = document.getElementById('recs-list');
+    el.innerHTML = '<div class="loading">Finding your recommendations…</div>';
+    try {
+        const recs = await api('/recommendations?limit=15');
+        if (!recs.length) {
+            el.innerHTML = '<div class="empty"><big>🎬</big>Rate a few movies first — come back here and we\'ll have picks for you.</div>';
+            return;
+        }
+        el.innerHTML = recs.map((r, i) => `
+            <div class="rec-item">
+                <div class="rec-rank">${i+1}</div>
+                <div class="rec-poster" style="${posterGrad(r.movie.genres)}">${EMOJI[r.movie.genres[0]]||'🎬'}</div>
+                <div class="rec-body">
+                    <div class="rec-title">${h(r.movie.title)}</div>
+                    <div class="rec-meta">
+                        ${r.movie.year||''}
+                        &nbsp;${r.movie.genres.map(g=>`<span class="tag">${g}</span>`).join(' ')}
+                    </div>
+                    <div class="match-bar">
+                        <div class="match-track">
+                            <div class="match-fill" style="width:${(r.similarity_score*100).toFixed(0)}%"></div>
+                        </div>
+                        <span class="match-label">${(r.similarity_score*100).toFixed(0)}% match</span>
+                    </div>
+                </div>
+                <div style="flex-shrink:0">${starInput(r.movie.id)}</div>
+            </div>`
+        ).join('');
+    } catch(err) {
+        el.innerHTML = `<div class="empty"><big>⚠️</big>${h(err.message)}</div>`;
+    }
+}
+
+// ─── My Ratings ───────────────────────────────────────────────────────────────
+async function fetchMyRatings() {
+    const grid = document.getElementById('rated-grid');
+    grid.innerHTML = '<div class="loading">Loading…</div>';
+    try {
+        const ratings = await api('/users/me/ratings');
+        if (!ratings.length) {
+            grid.innerHTML = '<div class="empty"><big>⭐</big>You haven\'t rated anything yet — head to Browse!</div>';
+            return;
+        }
+        MY_RATINGS = {};
+        ratings.forEach(r => MY_RATINGS[r.movie_id] = r.rating);
+        const movies = await Promise.all(ratings.map(r => api(`/movies/${r.movie_id}`)));
+        grid.innerHTML = movies.map(movieCard).join('');
+    } catch(err) {
+        grid.innerHTML = `<div class="empty"><big>⚠️</big>${h(err.message)}</div>`;
+    }
+}
+
+// ─── Preferences ──────────────────────────────────────────────────────────────
+async function fetchPrefs() {
+    const el = document.getElementById('prefs-list');
+    el.innerHTML = '<div class="loading">Loading…</div>';
+    try {
+        const data = await api('/users/me/preferences');
+        const prefs = data.preferences;
+        const keys = Object.keys(prefs);
+        if (!keys.length) {
+            el.innerHTML = '<div class="empty"><big>📊</big>Rate some movies and your taste profile will appear here.</div>';
+            return;
+        }
+        const max = Math.max(...Object.values(prefs));
+        el.innerHTML = keys.map(g => `
+            <div class="pref-row">
+                <div class="pref-name">${g}</div>
+                <div class="pref-track">
+                    <div class="pref-fill" style="width:${((prefs[g]/max)*100).toFixed(1)}%"></div>
+                </div>
+                <div class="pref-val">${(prefs[g]*100).toFixed(0)}%</div>
+            </div>`
+        ).join('');
+    } catch(err) {
+        el.innerHTML = `<div class="empty"><big>⚠️</big>${h(err.message)}</div>`;
+    }
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+const v  = id => document.getElementById(id)?.value?.trim() || '';
+const h  = s  => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+TOKEN && ME ? enterApp() : (document.getElementById('auth-screen').style.display = 'flex');
+</script>
+</body>
+</html>
